@@ -1,7 +1,7 @@
 {
   "name": "just-cookbook",
   "version": "0.1.0",
-  "description": "juustfile recipes",
+  "description": "justfile recipes",
   "main": "justfile",
   "scripts": {
     "test": "just"
