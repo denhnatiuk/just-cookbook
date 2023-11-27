@@ -1,0 +1,65 @@
+#!/usr/bin/env just --justfile
+
+set dotenv-load
+set positional-arguments 
+
+JUSTFILE_DIR := justfile_directory()
+
+@_default:
+  just --justfile {{justfile()}} --list --unsorted --list-heading '' --list-prefix 'backup '
+
+@_check_env_variables:
+  #!/usr/bin/bash
+  [ -z $PRJ_NAME ] && just --justfile {{JUSTFILE_DIR}}/dotenv update PRJ_NAME "`node -p "require('./package.json').name"`" project
+  [ -z $PRJ_VERSION ] && just --justfile {{JUSTFILE_DIR}}/dotenv update PRJ_VERSION "\"`node -p "require('./package.json').version"`\"" project
+  [ -z $PRJ_ROOT ] && just --justfile {{JUSTFILE_DIR}}/dotenv update PRJ_ROOT "`git rev-parse --show-toplevel`" project
+  if [ -z $PRJ_TYPE ]; then
+    echo "Please enter project type:"
+    read type
+    just --justfile {{JUSTFILE_DIR}}/dotenv update PRJ_TYPE "$type" project
+  fi
+
+# Backup server setup 
+setup:
+  #!/usr/bin/bash
+  just --justfile {{justfile()}}  _check_env_variables
+  if [ -z $backup ]; then
+    echo "Please enter NAS server url:"
+    read server
+    echo "Please enter NAS server port:"
+    read port
+    echo "Please enter NAS server user:"
+    read user
+    echo "Please enter NAS server directory:"
+    read directory
+    just --justfile {{JUSTFILE_DIR}}/dotenv update backup "'-p $port $user@$server:$directory'" backup
+    just --justfile {{JUSTFILE_DIR}}/dotenv update backup_port "$port" backup
+    just --justfile {{JUSTFILE_DIR}}/dotenv update backup_user "$user" backup
+    just --justfile {{JUSTFILE_DIR}}/dotenv update backup_server "$server" backup
+    just --justfile {{JUSTFILE_DIR}}/dotenv update backup_directory "$directory" backup
+  fi
+
+# Backup picked files to server 
+files *args="":
+  #!/usr/bin/bash
+  for arg in "$@" ; do
+    scp -P $backup_port -r $arg $backup_user@$backup_server:$backup_directory/$PRJ_TYPE/$PRJ_NAME/$arg
+  done
+
+# Backup project to server
+project:
+  #!/usr/bin/bash
+  echo $PRJ_VERSION
+  if [ -f ".temporary/${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2" ]; then
+    rm -f ".temporary/${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2"
+  fi
+  tar -C $PRJ_ROOT \
+    --exclude=".temporary" \
+    --exclude="${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2" \
+    -cjvf .temporary/${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2 \
+    $( ls -a $PRJ_ROOT | grep -v '\(^\.$\)\|\(^\.\.$\)' )
+  scp -P $backup_port .temporary/${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2 $backup_user@$backup_server:$backup_directory/$PRJ_TYPE/$PRJ_NAME 
+  # ssh -p $backup_port $backup_user@$backup_server 'cd $backup_directory/$PRJ_TYPE \
+  #   && if [ ! -d "$PRJ_NAME" ]; then mkdir $PRJ_NAME fi \
+  #   && tar -xjvf ${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2 -C $backup_directory/$PRJ_TYPE/$PRJ_NAME \
+  #   && rm -f $backup_directory/${PRJ_NAME}_v${PRJ_VERSION}.tar.bz2'
