@@ -11,18 +11,20 @@ set positional-arguments
 create:
   #!/bin/bash
   [ ! -f .env ] && touch .env
-  [ ! -f .env.example ] && touch .env.example
+  # TODO: add copying env var keys without values to .env.example list or do it on git secrets sync. 
+  # [ ! -f .env.example ] && touch .env.example
   [ ! -f .gitignore ] && touch .gitignore
   if ! grep -q ".env" .gitignore; then
-    echo -e "\n.env" >> .gitignore
-    echo -e "\n!.env.example" >> .gitignore
+    echo -e ".env" >> .gitignore
+    echo -e "!.env.example" >> .gitignore
   fi
 
 # Update .env variable | Usage: update_env key value group(optional) file(optional)
 update *args='':
   #!/usr/bin/bash
+  [ ! -f .env ] && just --justfile {{justfile_directory()}}/dotenv create
   key="$1"
-  value="$2"
+  value="\"$2\""
   group="${3:-else}"
   file="${4:-.env}"
 
@@ -34,11 +36,14 @@ update *args='':
   else
       echo -e "\n# $group\n$key=$value" >> "$file"
   fi
-  direnv allow
+  just --justfile {{justfile_directory()}}/dotenv load_with_direnv
 
 # Load dotenv with direnv
 load_with_direnv:
-  [ ! -f .envrc ] && echo "[ -f .env ] && dotenv" >> .envrc
+  #!/usr/bin/bash
+  if [ ! -f .envrc ]; then
+    echo "[ -f .env ] && dotenv" >> .envrc
+  fi
   direnv allow
 
 # Create dotenv-vault and login to dotenv server

@@ -15,6 +15,7 @@ DATE := `date +%Y-%m-%d`
 find_receipes:
   #!/usr/bin/bash
   shebang="#!/usr/bin/env just --justfile"
+  [ -z $PRJ_ROOT ] && just _check_env_variables
   find "$PRJ_ROOT" -type f -print0 | while IFS= read -r -d '' file; do
     # Check if the first line of the file matches the shebang
     if [[ $(head -n 1 "$file" 2>/dev/null | tr -d '\0') == "$shebang" ]]; then
@@ -24,10 +25,10 @@ find_receipes:
     fi
   done
 
-@_check_env_variables:
+_check_env_variables:
   #!/usr/bin/bash
   [ -z $PRJ_NAME ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_NAME "`node -p "require('./package.json').name"`" project
-  [ -z $PRJ_VERSION ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION "\"`node -p "require('./package.json').version"`\"" project
+  [ -z $PRJ_VERSION ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION "`node -p "require('./package.json').version"`" project
   [ -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT "`git rev-parse --show-toplevel`" project
   if [ -z $PRJ_TYPE ]; then
     echo "Please enter project type:"
@@ -36,30 +37,33 @@ find_receipes:
   fi
 
 # Add recipe into shell aliases | alias receipe justfile
-@_alias *args="":
+@alias *args="":
   alias $1="just --justfile $2 $1"
 
 # Add aliases for all receipes in justfile
-@_alias_justfile +FILE:
+@alias_justfile +FILE:
+  #!/usr/bin/bash
   for recipe in `just --justfile {{FILE}} --summary`; do
     alias $recipe="just --justfile {{FILE}} --working-directory . $recipe"
   done
 
 # Remove aliases for all receipes in justfile
-@_remove_receipes-shell-alias +FILE:
+@remove_receipes-shell-alias +FILE:
+  #!/usr/bin/bash
   for recipe in `just --justfile {{FILE}} --summary`; do
-  unalias $recipe
+    unalias $recipe
   done
 
 # Update version using node: npm version <update_type> : major.minor.patch
 @increment_version +type:
   npm version {{type}}
 
-# Update version using sh 
-@set_verion +new_version:
+# Set project version manually
+@set_version +new_version:
   #!/usr/bin/bash
   [ -z $PRJ_VERSION ] && just _check_env_variables
   jq '. |= . + { "version": "{{new_version}}" }' package.json > package.json.tmp
   mv package.json.tmp package.json
-  echo "Set version {{new_version}}"
+  just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION {{new_version}} project
+  echo "version updated to {{new_version}}"
 
