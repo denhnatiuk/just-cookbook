@@ -1,0 +1,113 @@
+#!/usr/bin/env just --justfile
+
+set dotenv-load
+set positional-arguments 
+
+@_default:
+  just --justfile {{justfile()}} --list --list-heading '' --list-prefix 'dotenv '
+
+
+# Create .env .env.example and add .env to gitignore
+create:
+  #!/bin/bash
+  [ ! -f .env ] && touch .env
+  [ ! -f .env.example ] && touch .env.example
+  [ ! -f .gitignore ] && touch .gitignore
+  if ! grep -q ".env" .gitignore; then
+    echo -e "\n.env" >> .gitignore
+    echo -e "\n!.env.example" >> .gitignore
+  fi
+
+# Update .env variable | Usage: update_env key value group(optional) file(optional)
+update *args='':
+  #!/usr/bin/bash
+  key="$1"
+  value="$2"
+  group="${3:-else}"
+  file="${4:-.env}"
+
+  if grep -q "^$key=" "$file"; then
+      sed -i "s/^$key=.*/$key=$value/" "$file"
+  elif grep -q "^# $group" "$file"; then
+      sed -i "/^# $group/a\\
+  $key=$value" "$file"
+  else
+      echo -e "\n# $group\n$key=$value" >> "$file"
+  fi
+  direnv allow
+
+# Load dotenv with direnv
+load_with_direnv:
+  [ ! -f .envrc ] && echo "[ -f .env ] && dotenv" >> .envrc
+  direnv allow
+
+# Create dotenv-vault and login to dotenv server
+vault_init:
+  npx dotenv-vault@latest new
+  npx dotenv-vault@latest login
+
+# push env to dotenv server
+vault_push:
+  npx dotenv-vault@latest push
+
+# pull env from dotenv server
+vault_pull:
+  npx dotenv-vault@latest pull
+
+# Encrypt dotenv with gpg key ( .env file and git gpg uses as default)
+encrypt:
+  #!/bin/bash
+
+  FILE="${1:-.env}"
+  GITKEY=$(git config --get user.signingkey)
+  KEY="${2:-$GITKEY}"
+
+  if [[ -z "$KEY" ]]; then
+      echo "No GPG key. Set correct custom GPG key or set Git GPG 'git config --global user.signingkey YOURKEYID'."
+      exit 1
+  fi
+  gpg --encrypt --recipient "$KEY" "$FILE"
+
+# Decrypt dotenv with gpg key 
+decrypt:
+  #!/bin/bash
+
+  FILE="${1:-.env.gpg}"
+  GITKEY=$(git config --get user.signingkey)
+  KEY="${2:-$GITKEY}"
+
+  if [[ -z "$KEY" ]]; then
+    echo "No GPG key. Set correct custom GPG key or set Git GPG 'git config --global user.signingkey YOURKEYID'."
+    exit 1
+  fi
+  gpg --decrypt --output ".env" "$FILE"
+
+# Push env vars to github repo secrets
+_sync_to_gh_secrets:
+  #!/bin/bash
+  direnv allow
+  echo $repo
+
+  while IFS= read -r line
+  do
+    if [[ "$line" != *"="* ]]; then
+      continue
+    fi
+    IFS='=' read -ra PARTS <<< "$line"
+    echo ${PARTS[1]} | gh secret set ${PARTS[0]} --repo=$REPO --body=-
+  done < .env
+
+# Remove env vars to github repo secrets
+_rm_from_gh_secrets:
+  #!/bin/bash
+  direnv allow
+  echo $repo
+
+  while IFS= read -r line
+  do
+    if [[ "$line" != *"="* ]]; then
+      continue
+    fi
+    IFS='=' read -ra PARTS <<< "$line"
+    echo ${PARTS[1]} | gh secret delete ${PARTS[0]} --repo=$REPO
+  done < .env
