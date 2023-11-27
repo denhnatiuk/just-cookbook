@@ -11,6 +11,7 @@ set positional-arguments
 create:
   #!/bin/bash
   [ ! -f .env ] && touch .env
+
   # TODO: add copying env var keys without values to .env.example list or do it on git secrets sync. 
   # [ ! -f .env.example ] && touch .env.example
   [ ! -f .gitignore ] && touch .gitignore
@@ -44,6 +45,7 @@ load_with_direnv:
   if [ ! -f .envrc ]; then
     echo "[ -f .env ] && dotenv" >> .envrc
   fi
+
   direnv allow
 
 # Create dotenv-vault and login to dotenv server
