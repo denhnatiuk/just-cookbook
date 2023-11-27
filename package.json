@@ -1,0 +1,12 @@
+{
+  "name": "just-cookbook",
+  "version": "0.1.0",
+  "description": "juustfile recipes",
+  "main": "justfile",
+  "scripts": {
+    "test": "just"
+  },
+  "keywords": ["just", "justfile", "recipes"],
+  "author": "Den Hnatiuk",
+  "license": "ISC"
+}
