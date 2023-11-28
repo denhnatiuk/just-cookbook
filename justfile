@@ -57,6 +57,7 @@ _check_env_variables:
 # Update version using node: npm version <update_type> : major.minor.patch
 @increment_version +type:
   npm version {{type}}
+  just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION "`node -p "require('./package.json').version"`" project
 
 # Set project version manually
 @set_version +new_version:
@@ -67,3 +68,5 @@ _check_env_variables:
   just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION {{new_version}} project
   echo "version updated to {{new_version}}"
 
+@changelog +MSG:
+  mkdir -p "$PRJ_ROOT/docs" && touch "$PRJ_ROOT/docs/changelog.txt" && echo -e "\n{{DATE}}\n$PRJ_VERSION - {{MSG}}" >> "$PWD/docs/changelog.txt"
