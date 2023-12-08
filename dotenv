@@ -118,3 +118,30 @@ _rm_from_gh_secrets:
     IFS='=' read -ra PARTS <<< "$line"
     echo ${PARTS[1]} | gh secret delete ${PARTS[0]} --repo=$REPO
   done < .env
+
+# dotenv.example
+create_example:
+  #!/bin/bash
+
+  input=".env"
+  output=".env.example"
+  placeholder="YOUR_VALUE_HERE"
+
+  [ ! -f "$input" ] && echo "File $input does not exist." && exit 1
+
+  # Create or clear the output file
+  > $output
+
+  while IFS= read -r line; do
+    # Check if the line contains an equals sign
+    if [[ $line == *"="* ]]; then
+      # Split the line into name and value
+      name="${line%%=*}"
+      # Write the name and placeholder to the output file
+      echo "$name=$placeholder" >> $output
+    else
+      # Write the line to the output file as is
+      echo "$line" >> $output
+    fi
+  done < "$input"
+  echo "File $output has been created."
