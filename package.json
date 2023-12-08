@@ -1,6 +1,6 @@
 {
   "name": "just-cookbook",
-  "version": "0.2.0",
+  "version": "0.3.2",
   "description": "justfile recipes",
   "main": "justfile",
   "scripts": {
@@ -12,5 +12,5 @@
     "recipes"
   ],
   "author": "Den Hnatiuk",
-  "license": "ISC"
+  "license": "BeerWare"
 }

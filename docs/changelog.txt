@@ -1,0 +1,8 @@
+2023-11-27
+0.1.0 - main justfile
+0.2.0 - add dotenv functionality
+0.3.0 - add backup functionality
+2023-11-28
+0.3.1 - edit main justfile, add changelog functionality, fix env var PRJ_VERSION automated change on version incrementing
+2023-12-04
+0.3.2 - add beerware license
