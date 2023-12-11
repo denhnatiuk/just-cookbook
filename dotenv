@@ -10,7 +10,7 @@ set positional-arguments
 create:
   #!/bin/bash
 
-  [ ! -z $PRJ_ROOT ]just --justfile {{justfile_directory()}}/justfile project_root
+  [ ! -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/justfile project_root
 
   [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env
 
@@ -29,7 +29,7 @@ update *args='':
   key="$1"
   value="\"$2\""
   group="${3:-else}"
-  file="${4:-.env}"
+  file="${4:-${PRJ_ROOT}.env}"
 
   if grep -q "^$key=" "$file"; then
       sed -i "s/^$key=.*/$key=$value/" "$file"
