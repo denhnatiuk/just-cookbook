@@ -29,7 +29,7 @@ update *args='':
   key="$1"
   value="\"$2\""
   group="${3:-else}"
-  file="${4:-${PRJ_ROOT}.env}"
+  file="${4:-${PRJ_ROOT}/.env}"
 
   if grep -q "^$key=" "$file"; then
       sed -i "s/^$key=.*/$key=$value/" "$file"
