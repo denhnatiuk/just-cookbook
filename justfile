@@ -8,6 +8,10 @@ set positional-arguments
 TIMESTAMP := `date +"%T"`
 DATE := `date +%Y-%m-%d`
 
+# TODO: 
+# 1. separate internal cookbook operations and project level operations
+
+
 @_default: 
   just find_receipes
 
@@ -27,9 +31,10 @@ find_receipes:
 
 _check_env_variables:
   #!/usr/bin/bash
+  [ -z $PRJ_ROOT ] && just project_root
   [ -z $PRJ_NAME ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_NAME "`node -p "require('./package.json').name"`" project
   [ -z $PRJ_VERSION ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION "`node -p "require('./package.json').version"`" project
-  [ -z $PRJ_ROOT ] && just project_root
+
   if [ -z $PRJ_TYPE ]; then
     echo "Please enter project type:"
     read type
@@ -50,7 +55,7 @@ project_root:
       echo -e "${BLUE}Define Path of your project root ${NC}"
       echo -e "${BLUE}1. ${GIT_ROOT} ${NC}"
       echo -e "${BLUE}2. ${PACKAGE_ROOT} ${NC}"
-      read -p "${BLUE}type 1, 2 or write full path customly:${NC} " choice
+      read -p "Type 1, 2 or write full path customly: " choice
       case $choice in
         1)
           PRJ_ROOT=$GIT_ROOT
@@ -67,9 +72,11 @@ project_root:
           fi
           ;;
       esac
+      [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env
       just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $PRJ_ROOT project
       echo -e "${BLUE} Project root set to ${PRJ_ROOT} ${NC}"
     else 
+      [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env
       just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $GIT_ROOT project
       echo -e "${BLUE} Project root set to ${PRJ_ROOT} ${NC}"
     fi

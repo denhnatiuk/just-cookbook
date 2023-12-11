@@ -6,15 +6,17 @@ set positional-arguments
 @_default:
   just --justfile {{justfile()}} --list --list-heading '' --list-prefix 'dotenv '
 
-
 # Create .env .env.example and add .env to gitignore
 create:
   #!/bin/bash
-  [ ! -f .env ] && touch .env
+
+  [ ! -z $PRJ_ROOT ]just --justfile {{justfile_directory()}}/justfile project_root
+
+  [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env
 
   # TODO: add copying env var keys without values to .env.example list or do it on git secrets sync. 
-  # [ ! -f .env.example ] && touch .env.example
-  [ ! -f .gitignore ] && touch .gitignore
+  # [ ! -f $PRJ_ROOT/.env.example ] && touch $PRJ_ROOT/.env.example
+  [ ! -f $PRJ_ROOT/.gitignore ] && touch $PRJ_ROOT/.gitignore
   if ! grep -q ".env" .gitignore; then
     echo -e ".env" >> .gitignore
     echo -e "!.env.example" >> .gitignore
@@ -23,7 +25,7 @@ create:
 # Update .env variable | Usage: update_env key value group(optional) file(optional)
 update *args='':
   #!/usr/bin/bash
-  [ ! -f .env ] && just --justfile {{justfile_directory()}}/dotenv create
+  [ ! -f "${PRJ_ROOT}/.env" ] && just --justfile {{justfile_directory()}}/dotenv create
   key="$1"
   value="\"$2\""
   group="${3:-else}"
@@ -42,8 +44,8 @@ update *args='':
 # Load dotenv with direnv
 load_with_direnv:
   #!/usr/bin/bash
-  if [ ! -f .envrc ]; then
-    echo "[ -f .env ] && dotenv" >> .envrc
+  if [ ! -f $PRJ_ROOT/.envrc ]; then
+    echo "[ -f $PRJ_ROOT/.env ] && dotenv" >> $PRJ_ROOT/.envrc
   fi
 
   direnv allow
@@ -87,7 +89,7 @@ decrypt:
     echo "No GPG key. Set correct custom GPG key or set Git GPG 'git config --global user.signingkey YOURKEYID'."
     exit 1
   fi
-  gpg --decrypt --output ".env" "$FILE"
+  gpg --decrypt --output "${PRJ_ROOT}/.env" "$FILE"
 
 # Push env vars to github repo secrets
 _sync_to_gh_secrets:
@@ -102,7 +104,7 @@ _sync_to_gh_secrets:
     fi
     IFS='=' read -ra PARTS <<< "$line"
     echo ${PARTS[1]} | gh secret set ${PARTS[0]} --repo=$REPO --body=-
-  done < .env
+  done < "${PRJ_ROOT}/.env"
 
 # Remove env vars to github repo secrets
 _rm_from_gh_secrets:
@@ -117,14 +119,14 @@ _rm_from_gh_secrets:
     fi
     IFS='=' read -ra PARTS <<< "$line"
     echo ${PARTS[1]} | gh secret delete ${PARTS[0]} --repo=$REPO
-  done < .env
+  done < "${PRJ_ROOT}/.env"
 
 # dotenv.example
 create_example:
   #!/bin/bash
 
-  input=".env"
-  output=".env.example"
+  input="${PRJ_ROOT}/.env"
+  output="${PRJ_ROOT}/.env.example"
   placeholder="YOUR_VALUE_HERE"
 
   [ ! -f "$input" ] && echo "File $input does not exist." && exit 1
