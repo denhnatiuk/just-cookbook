@@ -61,14 +61,17 @@ project_root:
         *)
           if [ -d $choice ]; then
             echo "You chose to write your own path of Project Root: $choice"
+            PRJ_ROOT=$choice
           else
             echo "Written PATH not exists. $choice"
           fi
           ;;
       esac
+      just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $PRJ_ROOT project
+      echo -e "${BLUE} Project root set to ${PRJ_ROOT} ${NC}"
     else 
       just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $GIT_ROOT project
-      echo -e "${BLUE} Project root set to ${GIT_ROOT} ${NC}"
+      echo -e "${BLUE} Project root set to ${PRJ_ROOT} ${NC}"
     fi
   else echo "Project root set to: "$PRJ_ROOT
   fi
