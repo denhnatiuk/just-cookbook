@@ -12,11 +12,11 @@ create:
 
   [ ! -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/justfile project_root
 
-  [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env
+  [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env && chmod 600 $PRJ_ROOT/.env
 
   # TODO: add copying env var keys without values to .env.example list or do it on git secrets sync. 
   # [ ! -f $PRJ_ROOT/.env.example ] && touch $PRJ_ROOT/.env.example
-  [ ! -f $PRJ_ROOT/.gitignore ] && touch $PRJ_ROOT/.gitignore
+  [ ! -f $PRJ_ROOT/.gitignore ] && touch $PRJ_ROOT/.gitignore  && chmod 600 $PRJ_ROOT/.gitignore
   if ! grep -q ".env" .gitignore; then
     echo -e ".env" >> .gitignore
     echo -e "!.env.example" >> .gitignore
