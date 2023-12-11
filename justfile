@@ -29,7 +29,7 @@ _check_env_variables:
   #!/usr/bin/bash
   [ -z $PRJ_NAME ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_NAME "`node -p "require('./package.json').name"`" project
   [ -z $PRJ_VERSION ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_VERSION "`node -p "require('./package.json').version"`" project
-  [ -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT "`git rev-parse --show-toplevel`" project
+  [ -z $PRJ_ROOT ] && just project_root
   if [ -z $PRJ_TYPE ]; then
     echo "Please enter project type:"
     read type
