@@ -36,6 +36,43 @@ _check_env_variables:
     just --justfile {{justfile_directory()}}/dotenv update PRJ_TYPE "$type" project
   fi
 
+project_root:
+  #!/usr/bin/bash
+  echo $PRJ_ROOT
+  if [ -z $PRJ_ROOT ]; then
+
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
+
+    GIT_ROOT=`git rev-parse --show-toplevel`
+    [ -f ./package.json ] && PACKAGE_ROOT=$PWD && echo $PACKAGE_ROOT
+    if [ $GIT_ROOT != $PACKAGE_ROOT ]; then
+      echo -e "${BLUE}Define Path of your project root ${NC}"
+      echo -e "${BLUE}1. ${GIT_ROOT} ${NC}"
+      echo -e "${BLUE}2. ${PACKAGE_ROOT} ${NC}"
+      read -p "${BLUE}type 1, 2 or write full path customly:${NC} " choice
+      case $choice in
+        1)
+          PRJ_ROOT=$GIT_ROOT
+          ;;
+        2)
+          PRJ_ROOT=$PACKAGE_ROOT
+          ;;
+        *)
+          if [ -d $choice ]; then
+            echo "You chose to write your own path of Project Root: $choice"
+          else
+            echo "Written PATH not exists. $choice"
+          fi
+          ;;
+      esac
+    else 
+      just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $GIT_ROOT project
+      echo -e "${BLUE} Project root set to ${GIT_ROOT} ${NC}"
+    fi
+  else echo "Project root set to: "$PRJ_ROOT
+  fi
+
 # Add recipe into shell aliases | alias receipe justfile
 @alias *args="":
   alias $1="just --justfile $2 $1"
@@ -69,4 +106,4 @@ _check_env_variables:
   echo "version updated to {{new_version}}"
 
 @changelog +MSG:
-  mkdir -p "$PRJ_ROOT/docs" && touch "$PRJ_ROOT/docs/changelog.txt" && echo -e "\n{{DATE}}\n$PRJ_VERSION - {{MSG}}" >> "$PWD/docs/changelog.txt"
+  mkdir -p "$PRJ_ROOT/docs" && touch "$PRJ_ROOT/docs/changelog.txt" && echo -e "\n{{DATE}}\n$PRJ_VERSION - {{MSG}}" >> "$PRJ_ROOT/docs/changelog.txt"
