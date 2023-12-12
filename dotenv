@@ -10,26 +10,71 @@ set positional-arguments
 create:
   #!/bin/bash
 
-  [ ! -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/justfile project_root
+  if [ -z $PRJ_ROOT ]; then
 
-  [ ! -f $PRJ_ROOT/.env ] && touch $PRJ_ROOT/.env && chmod 600 $PRJ_ROOT/.env
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
 
+    GIT_ROOT=$(git rev-parse --show-toplevel)
+    PACKAGE_ROOT=$(npm prefix)
+    # [ -f "${GIT_ROOT}/package.json" ] && PACKAGE_ROOT=$PWD
+
+    if [ $GIT_ROOT == $PACKAGE_ROOT ]; then
+      PRJ_ROOT=$GIT_ROOT
+    else
+      echo -e "${BLUE}Define Path of your project root ${NC}"
+      echo -e "${BLUE}1. ${GIT_ROOT} ${NC}"
+      echo -e "${BLUE}2. ${PACKAGE_ROOT} ${NC}"
+      read -p "Type 1, 2 or write full path customly: " choice
+      case $choice in
+        1)
+          PRJ_ROOT=$GIT_ROOT
+          echo "git root ${PRJ_ROOT}/.env"
+          ;;
+        2)
+          PRJ_ROOT=$PACKAGE_ROOT
+          echo "package root ${PRJ_ROOT}/.env"
+          ;;
+        *)
+          if [ -d $choice ]; then
+            PRJ_ROOT=$choice
+            echo "Your chosen Root: ${PRJ_ROOT}/.env"
+          else
+            echo "Written ROOT Absolute PATH not exists. $choice"
+            exit 1
+          fi
+          ;;
+      esac
+    fi
+    echo -e "${BLUE} PRJ_ROOT set to ${PRJ_ROOT} ${NC}"
+    
+    if [ ! -f "${PRJ_ROOT}/.env" ]; then
+      touch "${PRJ_ROOT}/.env" && chmod 600 "${PRJ_ROOT}/.env"
+      just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $PRJ_ROOT project .env
+      just --justfile {{justfile_directory()}}/dotenv load_with_direnv
+    fi
+
+  else echo "Project root contains in .env and set to: ${PRJ_ROOT}"
+  fi
   # TODO: add copying env var keys without values to .env.example list or do it on git secrets sync. 
-  # [ ! -f $PRJ_ROOT/.env.example ] && touch $PRJ_ROOT/.env.example
-  [ ! -f $PRJ_ROOT/.gitignore ] && touch $PRJ_ROOT/.gitignore  && chmod 600 $PRJ_ROOT/.gitignore
-  if ! grep -q ".env" .gitignore; then
-    echo -e ".env" >> .gitignore
-    echo -e "!.env.example" >> .gitignore
+  # [ ! -f "${PRJ_ROOT}/.env.example" ] && touch "${PRJ_ROOT}/.env.example"
+  just --justfile {{justfile_directory()}}/justfile create_file .gitignore $PRJ_ROOT
+  # [ ! -f "${PRJ_ROOT}/.gitignore" ] && touch "${PRJ_ROOT}/.gitignore"  && chmod 600 "${PRJ_ROOT}/.gitignore"
+  if ! grep -q ".env" "${PRJ_ROOT}/.gitignore"; then
+    echo -e ".env" >> "${PRJ_ROOT}/.gitignore"
+    echo -e "!.env.example" >> "${PRJ_ROOT}/.gitignore"
   fi
 
 # Update .env variable | Usage: update_env key value group(optional) file(optional)
 update *args='':
   #!/usr/bin/bash
+  # [ ! -z $PRJ_ROOT ] && just --justfile {{justfile_directory()}}/dotenv create
   [ ! -f "${PRJ_ROOT}/.env" ] && just --justfile {{justfile_directory()}}/dotenv create
   key="$1"
   value="\"$2\""
   group="${3:-else}"
-  file="${4:-${PRJ_ROOT}/.env}"
+  default_env_file="${PRJ_ROOT}/.env"
+  file="${4:-$default_env_file}"
 
   if grep -q "^$key=" "$file"; then
       sed -i "s/^$key=.*/$key=$value/" "$file"
@@ -44,10 +89,9 @@ update *args='':
 # Load dotenv with direnv
 load_with_direnv:
   #!/usr/bin/bash
-  if [ ! -f $PRJ_ROOT/.envrc ]; then
-    echo "[ -f $PRJ_ROOT/.env ] && dotenv" >> $PRJ_ROOT/.envrc
+  if [ ! -f "${PRJ_ROOT}/.envrc" ]; then
+    echo "[ -f "${PRJ_ROOT}/.env" ] && dotenv" >> "${PRJ_ROOT}/.envrc"
   fi
-
   direnv allow
 
 # Create dotenv-vault and login to dotenv server
@@ -66,8 +110,8 @@ vault_pull:
 # Encrypt dotenv with gpg key ( .env file and git gpg uses as default)
 encrypt:
   #!/bin/bash
-
-  FILE="${1:-.env}"
+  default_file="${PRJ_ROOT}/.env"
+  FILE="${1:-$default_file}"
   GITKEY=$(git config --get user.signingkey)
   KEY="${2:-$GITKEY}"
 
@@ -80,8 +124,8 @@ encrypt:
 # Decrypt dotenv with gpg key 
 decrypt:
   #!/bin/bash
-
-  FILE="${1:-.env.gpg}"
+  default_file="${PRJ_ROOT}/.env.gpg"
+  FILE="${1:-$default_file}"
   GITKEY=$(git config --get user.signingkey)
   KEY="${2:-$GITKEY}"
 
@@ -95,7 +139,7 @@ decrypt:
 _sync_to_gh_secrets:
   #!/bin/bash
   direnv allow
-  echo $repo
+  echo $REPO
 
   while IFS= read -r line
   do
@@ -110,7 +154,7 @@ _sync_to_gh_secrets:
 _rm_from_gh_secrets:
   #!/bin/bash
   direnv allow
-  echo $repo
+  echo $REPO
 
   while IFS= read -r line
   do
