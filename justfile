@@ -85,3 +85,19 @@ create_file *args="":
   CHMOD="${3:-600}"
   [ ! -d "$DEST" ] && mkdir -p "$DEST"
   touch "${DEST}/${FILE}" && chmod $CHMOD "${DEST}/${FILE}"
+
+# indexer file to bump all receipes in one place
+init:
+  #!/usr/bin/bash
+  just create_file "${PRJ_ROOT}/justfile"
+  echo -e "#!/usr/bin/env just --justfile" > "${PRJ_ROOT}/justfile"
+  find "$PRJ_ROOT" -type f -print0 | while IFS= read -r -d '' file; do
+  # Check if the first line of the file matches the shebang
+  if [[ $(head -n 1 "$file" 2>/dev/null | tr -d '\0') == "$shebang" ]]; then
+    BASE=$(basename "$file")
+    output=$(just --justfile "$file" --list --unsorted --list-heading '' --list-prefix '    ')
+    echo "$output" | while read -r recipe; do
+      echo -e "$recipe: just --justfile ${file} $recipe args" >> "${PRJ_ROOT}/justfile"
+    done
+  fi
+  done
