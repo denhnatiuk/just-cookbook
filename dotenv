@@ -50,7 +50,7 @@ create:
     
     if [ ! -f "${PRJ_ROOT}/.env" ]; then
       touch "${PRJ_ROOT}/.env" && chmod 600 "${PRJ_ROOT}/.env"
-      just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $PRJ_ROOT project .env
+      just --justfile {{justfile_directory()}}/dotenv update PRJ_ROOT $PRJ_ROOT project "${PRJ_ROOT}/.env"
       just --justfile {{justfile_directory()}}/dotenv load_with_direnv
     fi
 
